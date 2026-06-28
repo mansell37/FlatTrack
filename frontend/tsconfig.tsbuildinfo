@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/sound.ts","./src/types.ts","./src/components/login.tsx","./src/components/timer.tsx","./src/components/workoutview.tsx","./src/pages/generate.tsx","./src/pages/history.tsx","./src/pages/saved.tsx","./src/pages/settingspage.tsx"],"errors":true,"version":"5.9.3"}

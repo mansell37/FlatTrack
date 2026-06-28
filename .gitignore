@@ -1,0 +1,30 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+*.pem
+garmin_tokens/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+*.sqlite3
+*.db
+
+# Node / frontend
+node_modules/
+frontend/dist/
+dist/
+.vite/
+npm-debug.log*
+
+# Editor / OS / local tooling
+.DS_Store
+.idea/
+.vscode/
+.claude/
+Thumbs.db
