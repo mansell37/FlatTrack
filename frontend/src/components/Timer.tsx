@@ -228,6 +228,25 @@ export default function Timer({
         <div className="big">{stopwatch ? fmt(totalRef.current) : fmt(remaining)}</div>
       </div>
 
+      {isRide && (
+        <div className="ride-metrics">
+          <div className="rm-tile">
+            <div className="rm-val">{trainer.data.power ?? "–"}</div>
+            <div className="rm-lbl">Power · W</div>
+          </div>
+          <div className="rm-tile">
+            <div className="rm-val">
+              {trainer.data.cadence != null ? Math.round(trainer.data.cadence) : "–"}
+            </div>
+            <div className="rm-lbl">Cadence · rpm</div>
+          </div>
+          <div className="rm-tile accent">
+            <div className="rm-val">{target ?? cur?.watts ?? "–"}</div>
+            <div className="rm-lbl">Target · W</div>
+          </div>
+        </div>
+      )}
+
       {!stopwatch && (
         <>
           <div className="timer-up-next">{upNext ? `Up next: ${upNext}` : "Last one — finish strong!"}</div>
@@ -239,53 +258,46 @@ export default function Timer({
 
       {isRide && (
         <div className="trainer-panel">
+          <div className="trainer-status">
+            {trainer.status === "connected" ? (
+              <>
+                <span className="ts-state"><span className="ts-dot on" /> Trainer connected — auto-setting resistance</span>
+                <button className="btn ghost sm" onClick={() => trainer.disconnect()}>Disconnect</button>
+              </>
+            ) : trainer.status === "unsupported" ? (
+              <span className="muted" style={{ fontSize: 12 }}>
+                Trainer control needs Chrome or Edge on a computer or Android.
+              </span>
+            ) : (
+              <button
+                className="btn connect"
+                onClick={() => trainer.connect()}
+                disabled={trainer.status === "connecting"}
+              >
+                {trainer.status === "connecting"
+                  ? <span className="spinner" />
+                  : <><span className="ts-dot" /> 🔌 Connect trainer</>}
+              </button>
+            )}
+          </div>
+          {trainer.status === "error" && trainer.error && (
+            <div className="center" style={{ fontSize: 12, color: "var(--accent)" }}>
+              {trainer.error}
+            </div>
+          )}
+
           <div className="trainer-bias">
-            <button className="btn ghost" onClick={() => adjustBias(-BIAS_STEP)} disabled={bias <= BIAS_MIN}>
+            <button className="btn bias" onClick={() => adjustBias(-BIAS_STEP)} disabled={bias <= BIAS_MIN}>
               − Easier
             </button>
             <div className="trainer-bias-val">
               <div className="big-pct">{bias}%</div>
-              <div className="muted" style={{ fontSize: 12 }}>
-                {target != null ? `${target}W target` : "intensity"}
-              </div>
+              <div className="muted" style={{ fontSize: 11 }}>intensity</div>
             </div>
-            <button className="btn ghost" onClick={() => adjustBias(BIAS_STEP)} disabled={bias >= BIAS_MAX}>
+            <button className="btn bias" onClick={() => adjustBias(BIAS_STEP)} disabled={bias >= BIAS_MAX}>
               Harder +
             </button>
           </div>
-
-          {trainer.status === "connected" ? (
-            <div className="trainer-live">
-              <div className="metric">
-                <span className="m-val">{trainer.data.power ?? "–"}</span>
-                <span className="m-lbl">watts</span>
-              </div>
-              <div className="metric">
-                <span className="m-val">
-                  {trainer.data.cadence != null ? Math.round(trainer.data.cadence) : "–"}
-                </span>
-                <span className="m-lbl">rpm</span>
-              </div>
-              <button className="btn ghost sm" onClick={() => trainer.disconnect()}>Disconnect</button>
-            </div>
-          ) : trainer.status === "unsupported" ? (
-            <div className="muted center" style={{ fontSize: 12 }}>
-              Pair a smart trainer in Chrome or Edge (computer / Android) to auto-set resistance.
-            </div>
-          ) : (
-            <button
-              className="btn block"
-              onClick={() => trainer.connect()}
-              disabled={trainer.status === "connecting"}
-            >
-              {trainer.status === "connecting" ? <span className="spinner" /> : "🔌 Connect trainer"}
-            </button>
-          )}
-          {trainer.status === "error" && trainer.error && (
-            <div className="center" style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
-              {trainer.error}
-            </div>
-          )}
         </div>
       )}
 
