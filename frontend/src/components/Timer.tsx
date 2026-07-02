@@ -3,8 +3,8 @@ import type { Difficulty, Workout } from "../types";
 import { api } from "../api";
 import { finish as finishSound, go, initAudio, rest as restSound, tick, vibrate } from "../sound";
 import { useTrainer } from "../useTrainer";
-import { loadQuiz, type QuizQ } from "../quiz";
-import QuizCard from "./QuizCard";
+import { loadFacts, TOPICS, type Topic } from "../learn";
+import LearnCard from "./LearnCard";
 import RideChart, { type Sample } from "./RideChart";
 
 const BIAS_MIN = 50;
@@ -87,10 +87,11 @@ export default function Timer({
   const [rounds, setRounds] = useState(0); // amrap / stopwatch round counter
   const [elapsed, setElapsed] = useState(0); // total elapsed seconds (reactive)
 
-  // Quiz mode: cycles questions while on (20s question, 10s answer).
-  const [quizOn, setQuizOn] = useState(false);
-  const [quizQs, setQuizQs] = useState<QuizQ[]>([]);
-  const [quizLoading, setQuizLoading] = useState(false);
+  // Learn mode: pick a topic, then interesting facts cycle while you work.
+  const [learnState, setLearnState] = useState<"off" | "pick" | "on">("off");
+  const [learnTopic, setLearnTopic] = useState<Topic>("mix");
+  const [learnFacts, setLearnFacts] = useState<string[]>([]);
+  const [learnLoading, setLearnLoading] = useState(false);
 
   // Live power/cadence samples for the ride chart.
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -111,6 +112,7 @@ export default function Timer({
   const lastTs = useRef(0);
   const runningRef = useRef(false);
   const dataRef = useRef(trainer.data);
+  const targetRef = useRef<number | null>(null);
   runningRef.current = running;
   dataRef.current = trainer.data;
 
@@ -192,29 +194,30 @@ export default function Timer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started, running, done, stopwatch]);
 
-  // Sample live power/cadence every 2s (while pedalling) for the chart.
+  // Sample live power/cadence (+ current target) every 2s while pedalling.
   useEffect(() => {
     if (!isRide || !started) return;
     const id = setInterval(() => {
       if (runningRef.current) {
-        setSamples((s) => [...s, { p: dataRef.current.power, c: dataRef.current.cadence }]);
+        setSamples((s) => [...s, {
+          p: dataRef.current.power,
+          c: dataRef.current.cadence,
+          t: targetRef.current ?? undefined,
+        }]);
       }
     }, 2000);
     return () => clearInterval(id);
   }, [isRide, started]);
 
-  async function toggleQuiz() {
-    if (quizOn) {
-      setQuizOn(false);
-      return;
-    }
-    setQuizLoading(true);
+  async function startLearn(topic: Topic) {
+    setLearnTopic(topic);
+    setLearnLoading(true);
     try {
-      const qs = await loadQuiz();
-      setQuizQs(qs);
-      setQuizOn(qs.length > 0);
+      const fs = await loadFacts(topic);
+      setLearnFacts(fs);
+      setLearnState(fs.length ? "on" : "off");
     } finally {
-      setQuizLoading(false);
+      setLearnLoading(false);
     }
   }
 
@@ -232,6 +235,7 @@ export default function Timer({
   // ---- Trainer / intensity (bike rides only) ----
   const rideWatts = isRide ? phases[index]?.watts ?? null : null;
   const target = rideWatts != null ? Math.round((rideWatts * bias) / 100) : null;
+  targetRef.current = target;
   const adjustBias = (d: number) =>
     setBias((b) => Math.min(BIAS_MAX, Math.max(BIAS_MIN, b + d)));
 
@@ -268,6 +272,10 @@ export default function Timer({
               <div className="rm-tile"><div className="rm-val">{avgPower}</div><div className="rm-lbl">Avg · W</div></div>
               <div className="rm-tile accent"><div className="rm-val">{maxPower}</div><div className="rm-lbl">Max · W</div></div>
               <div className="rm-tile"><div className="rm-val">{avgCad || "–"}</div><div className="rm-lbl">Avg · rpm</div></div>
+              <div className="rm-tile">
+                <div className="rm-val">{Math.round(powers.reduce((a, p) => a + p * 2, 0) / 1000)}</div>
+                <div className="rm-lbl">Work · kJ</div>
+              </div>
             </div>
             <RideChart samples={samples} />
           </>
@@ -336,15 +344,27 @@ export default function Timer({
   const cur = phases[index];
   const phaseKind = stopwatch ? "work" : cur?.kind ?? "work";
   const working = isWork(phaseKind);
-  const upNext = !stopwatch && phases[index + 1] ? phases[index + 1].label : "";
+  const nextPhase = !stopwatch ? phases[index + 1] : undefined;
+  const upNext = nextPhase
+    ? nextPhase.label +
+      (isRide && nextPhase.watts != null ? ` · ${Math.round((nextPhase.watts * bias) / 100)}W` : "")
+    : "";
   const phasePct = cur && cur.seconds ? 1 - remaining / cur.seconds : 0;
   const overallLeft = Math.max(0, totalPlanned - elapsed);
   const overallPct = totalPlanned ? Math.min(100, (elapsed / totalPlanned) * 100) : 0;
 
+  // Live ride stats for the dashboard.
+  const livePwrs = samples.map((s) => s.p).filter((p): p is number => p != null && p > 0);
+  const liveCads = samples.map((s) => s.c).filter((c): c is number => c != null && c > 0);
+  const liveAvg = (a: number[]) => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null);
+  const avgPwr = liveAvg(livePwrs);
+  const avgCad = liveAvg(liveCads);
+  const workKj = Math.round(samples.reduce((a, s) => a + (s.p || 0) * 2, 0) / 1000);
+
   return (
-    <div className="timer-overlay">
-      {quizOn && quizQs.length > 0 && (
-        <QuizCard questions={quizQs} onStop={() => setQuizOn(false)} />
+    <div className={`timer-overlay ${isRide ? "ride" : ""}`}>
+      {learnState === "on" && learnFacts.length > 0 && (
+        <LearnCard topic={learnTopic} facts={learnFacts} onStop={() => setLearnState("off")} />
       )}
 
       <div className="timer-phase">
@@ -358,13 +378,6 @@ export default function Timer({
         <div className="lbl">{stopwatch ? workout.title : cur?.label}</div>
         {cur?.sanskrit && <div className="sanskrit">{cur.sanskrit}</div>}
         {cur?.reps && <div className="reps">{cur.reps}</div>}
-        {cur?.watts != null && (
-          <div className="reps">
-            {target ?? cur.watts}W
-            {bias !== 100 && <span className="muted"> ({bias}%)</span>}
-            <span className="muted" style={{ fontSize: 14 }}> · {cur.pct}% FTP</span>
-          </div>
-        )}
         {cur?.notes && <div className="notes">{cur.notes}</div>}
         {workout.timer === "emom" && cur && (
           <div className="round-pips">
@@ -380,28 +393,52 @@ export default function Timer({
           <img className="pose-img" src={cur.image} alt={cur.label} />
           <div className={`pose-clock ${working ? "work" : "rest"}`}>{fmt(remaining)}</div>
         </div>
+      ) : isRide ? (
+        <div className="ride-dash">
+          <div className={`rd-tile big ${working ? "work" : "restcol"}`}>
+            <div className="rd-val">{fmt(remaining)}</div>
+            <div className="rd-lbl">Interval · {index + 1}/{phases.length}</div>
+          </div>
+          <div className="rd-tile big accent">
+            <div className="rd-val">{trainer.data.power ?? "–"}</div>
+            <div className="rd-lbl">Power · W</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{target ?? "–"}</div>
+            <div className="rd-lbl">Target{cur?.pct ? ` · ${cur.pct}% FTP` : " · W"}</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{trainer.data.cadence != null ? Math.round(trainer.data.cadence) : "–"}</div>
+            <div className="rd-lbl">Cadence · rpm</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{avgPwr ?? "–"}</div>
+            <div className="rd-lbl">Avg power</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{avgCad ?? "–"}</div>
+            <div className="rd-lbl">Avg cadence</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{workKj}</div>
+            <div className="rd-lbl">Work · kJ</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{fmt(elapsed)}</div>
+            <div className="rd-lbl">Elapsed</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{fmt(overallLeft)}</div>
+            <div className="rd-lbl">Left</div>
+          </div>
+          <div className="rd-tile">
+            <div className="rd-val">{bias}%</div>
+            <div className="rd-lbl">Intensity</div>
+          </div>
+        </div>
       ) : (
         <div className={`timer-clock ${working ? "work" : "rest"}`}>
           <div className="big">{stopwatch ? fmt(totalRef.current) : fmt(remaining)}</div>
-        </div>
-      )}
-
-      {isRide && (
-        <div className="ride-metrics">
-          <div className="rm-tile">
-            <div className="rm-val">{trainer.data.power ?? "–"}</div>
-            <div className="rm-lbl">Power · W</div>
-          </div>
-          <div className="rm-tile">
-            <div className="rm-val">
-              {trainer.data.cadence != null ? Math.round(trainer.data.cadence) : "–"}
-            </div>
-            <div className="rm-lbl">Cadence · rpm</div>
-          </div>
-          <div className="rm-tile accent">
-            <div className="rm-val">{target ?? cur?.watts ?? "–"}</div>
-            <div className="rm-lbl">Target · W</div>
-          </div>
         </div>
       )}
 
@@ -424,6 +461,7 @@ export default function Timer({
       )}
 
       {isRide && started && <RideChart samples={samples} />}
+      {isRide && !started && <div className="flex-spacer" />}
 
       {isRide && (
         <div className="trainer-panel">
@@ -481,15 +519,32 @@ export default function Timer({
         </div>
       )}
 
-      {started && (
-        <button
-          className={`btn block ${quizOn ? "primary" : "ghost"}`}
-          style={{ marginBottom: 10 }}
-          onClick={toggleQuiz}
-          disabled={quizLoading}
-        >
-          {quizLoading ? <span className="spinner" /> : quizOn ? "■ Stop quiz" : "🧠 Quiz me"}
-        </button>
+      {started && learnState !== "on" && (
+        learnState === "pick" ? (
+          <div className="learn-topics">
+            {TOPICS.map((t) => (
+              <button
+                key={t.key}
+                className="btn topic"
+                disabled={learnLoading}
+                onClick={() => startLearn(t.key)}
+              >
+                {learnLoading && learnTopic === t.key
+                  ? <span className="spinner" />
+                  : <>{t.emoji} {t.label}</>}
+              </button>
+            ))}
+            <button className="btn ghost topic" disabled={learnLoading} onClick={() => setLearnState("off")}>✕</button>
+          </div>
+        ) : (
+          <button
+            className="btn ghost block"
+            style={{ marginBottom: 10 }}
+            onClick={() => setLearnState("pick")}
+          >
+            📚 Learn something
+          </button>
+        )
       )}
 
       {started ? (

@@ -12,7 +12,7 @@ from .routes import settings as settings_routes
 from .routes import workouts as workout_routes
 from .schemas import LoginRequest
 
-app = FastAPI(title="Office Heat", version="1.0.0")
+app = FastAPI(title="FlatTrack", version="1.0.0")
 
 # CORS is permissive only to support running the Vite dev server on a different
 # port during local development; in production the frontend is same-origin.

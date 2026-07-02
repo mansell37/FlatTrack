@@ -81,41 +81,43 @@ def _extract_json_array(text: str) -> list:
     return json.loads(text[start:end + 1])
 
 
-def generate_quiz(n: int = 8) -> list[dict]:
-    """Generate a batch of mixed multiple-choice trivia questions via Claude."""
+FACT_TOPICS = {
+    "history": "world history — ancient civilisations, empires, inventions, pivotal moments",
+    "sport": "sport — famous feats, records, tactics, the science and history of sports (cycling especially welcome)",
+    "science": "science — physics, space, chemistry, technology and discoveries",
+    "biology": "human biology — how the body works: muscles, heart, lungs, brain, and exercise physiology",
+    "mix": "a broad mix of history, sport, science and human biology",
+}
+
+
+def generate_facts(topic: str = "mix", n: int = 10) -> list[str]:
+    """Generate a batch of interesting facts on a topic via Claude."""
     if not ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set — AI quiz is unavailable.")
+        raise RuntimeError("ANTHROPIC_API_KEY is not set — AI facts are unavailable.")
 
     from anthropic import Anthropic
 
+    subject = FACT_TOPICS.get(topic, FACT_TOPICS["mix"])
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
     msg = client.messages.create(
         model=ANTHROPIC_MODEL,
         max_tokens=2000,
-        system="You write fun, punchy pub-quiz trivia for someone exercising. Return ONLY JSON.",
+        system=("You write genuinely surprising, memorable facts for someone to read while "
+                "exercising. Each fact stands alone, is accurate, and lands in 1–2 short "
+                "sentences. Return ONLY JSON."),
         messages=[{"role": "user", "content": (
-            f"Generate {n} mixed general-knowledge multiple-choice trivia questions "
-            "(spread across geography, science, history, sport, music, film, nature, food). "
-            "Vary the difficulty. Return ONLY a JSON array; each item must be "
-            '{"q": "the question", "options": ["four", "short", "distinct", "options"], '
-            '"answer": "the exact correct option string"}. '
-            "Keep questions short and answers unambiguous. JSON only."
+            f"Write {n} fascinating facts about {subject}. Vary the sub-topics; avoid "
+            "clichés everyone already knows. Return ONLY a JSON array of strings, "
+            "each string one fact. JSON only."
         )}],
     )
     if msg.stop_reason == "max_tokens":
-        raise RuntimeError("AI quiz response was cut off — try again.")
+        raise RuntimeError("AI facts response was cut off — try again.")
     data = _extract_json_array("".join(b.text for b in msg.content if b.type == "text"))
 
-    out = []
-    for item in data:
-        q = item.get("q")
-        opts = item.get("options")
-        ans = item.get("answer")
-        # Only keep well-formed questions whose answer is one of the options.
-        if q and isinstance(opts, list) and len(opts) >= 2 and ans in opts:
-            out.append({"q": str(q), "options": [str(o) for o in opts], "answer": str(ans)})
+    out = [str(f).strip() for f in data if isinstance(f, str) and len(str(f).strip()) > 20]
     if not out:
-        raise RuntimeError("AI returned no valid quiz questions.")
+        raise RuntimeError("AI returned no valid facts.")
     return out
 
 

@@ -124,7 +124,7 @@ def build_cycling_payload(workout: dict) -> dict:
     steps = [_step(i + 1, b) for i, b in enumerate(workout.get("blocks", []))]
     return {
         "sportType": _SPORT_CYCLING,
-        "workoutName": workout.get("title", "Office Heat ride")[:80],
+        "workoutName": workout.get("title", "FlatTrack ride")[:80],
         "description": (workout.get("summary") or "")[:1024],
         "workoutSegments": [{
             "segmentOrder": 1,

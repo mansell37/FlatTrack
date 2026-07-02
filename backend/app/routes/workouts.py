@@ -57,13 +57,13 @@ def ai_status():
     return {"configured": bool(ANTHROPIC_API_KEY)}
 
 
-@router.get("/quiz")
-def quiz():
-    # Fresh AI trivia when a key is set; otherwise the frontend uses its local bank.
+@router.get("/facts")
+def facts(topic: str = "mix"):
+    # Fresh AI facts when a key is set; otherwise the frontend uses its local bank.
     try:
-        return {"questions": ai.generate_quiz(), "source": "ai"}
+        return {"facts": ai.generate_facts(topic), "source": "ai"}
     except Exception:
-        return {"questions": [], "source": "none"}
+        return {"facts": [], "source": "none"}
 
 
 @router.post("/generate")

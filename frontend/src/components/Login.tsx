@@ -25,7 +25,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
       <form className="login-wrap" onSubmit={submit}>
         <div className="center">
           <div style={{ fontSize: 48 }}>🔥</div>
-          <h1 style={{ margin: "8px 0 0" }}>Office Heat</h1>
+          <h1 style={{ margin: "8px 0 0" }}>FlatTrack</h1>
           <p className="muted">Enter the password to continue</p>
         </div>
         <input

@@ -12,6 +12,9 @@
   --blue: #3d9bff;
   --radius: 14px;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  /* chart series (CVD-validated against the dark surface) */
+  --chart-pwr: #f4581f;
+  --chart-cad: #2e86ea;
 }
 
 /* light theme */
@@ -28,6 +31,9 @@
   --red: #e0342a;
   --blue: #2b7fe0;
   --shadow: 0 6px 24px rgba(20, 30, 50, 0.12);
+  /* chart series (CVD-validated against the light surface) */
+  --chart-pwr: #f0562c;
+  --chart-cad: #2b7fe0;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -160,7 +166,8 @@ body {
 /* timer overlay */
 .timer-overlay {
   position: fixed; inset: 0; background: var(--bg); z-index: 60;
-  display: flex; flex-direction: column; padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; padding: 16px 18px calc(16px + env(safe-area-inset-bottom));
+  overflow-y: auto;
 }
 .timer-phase { text-align: center; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
 .timer-current { text-align: center; margin-top: 8px; }
@@ -269,34 +276,72 @@ body {
 .timer-overall-bar { flex: 1; height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
 .timer-overall-bar > div { height: 100%; background: var(--blue); transition: width 0.3s linear; }
 
-/* live ride chart (power + cadence) */
-.ride-chart { margin-bottom: 12px; }
-.ride-chart.empty { font-size: 12px; text-align: center; padding: 16px; border: 1px dashed var(--border); border-radius: 12px; }
-.ride-chart-svg {
-  width: 100%; height: 110px; display: block;
+/* live ride telemetry: stacked power + cadence strips, each on its own scale */
+.ride-chart { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.ride-chart.empty { font-size: 13px; text-align: center; padding: 18px; border: 1px dashed var(--border); border-radius: 12px; }
+.strip { display: flex; flex-direction: column; min-height: 0; }
+.strip-head { display: flex; align-items: baseline; gap: 10px; font-size: 12px; margin-bottom: 3px; }
+.strip-title { font-weight: 700; }
+.strip-latest { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.strip-max { color: var(--muted); font-variant-numeric: tabular-nums; }
+.strip-svg {
+  width: 100%; display: block; height: 120px;
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
 }
-.ride-chart-legend { display: flex; gap: 16px; justify-content: center; font-size: 11px; margin-top: 5px; }
-.ride-chart-legend .pwr { color: var(--accent); }
-.ride-chart-legend .cad { color: var(--blue); }
+.strip.cad .strip-svg { height: 64px; }
+.gridline { stroke: var(--border); stroke-width: 1; }
+.ride-chart-legend { display: flex; gap: 16px; justify-content: center; font-size: 12px; }
 
-/* quiz pop-up card */
-.quiz-card {
-  position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-  width: min(560px, 94%); z-index: 70;
-  background: var(--surface); border: 1px solid var(--accent); border-radius: 16px;
-  padding: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+/* pro ride dashboard */
+.ride-dash { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin: 8px 0 10px; }
+.rd-tile {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 8px 6px; text-align: center; min-width: 0;
 }
-.quiz-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.quiz-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: var(--accent); }
-.quiz-secs { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
-.quiz-q { font-size: 17px; font-weight: 700; line-height: 1.25; margin-bottom: 10px; }
-.quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.quiz-opt { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 14px; }
-.quiz-opt.correct { border-color: var(--green); background: rgba(46, 204, 113, 0.16); color: var(--green); font-weight: 700; }
-.quiz-bar { height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 10px; }
-.quiz-bar > div { height: 100%; background: var(--accent); transition: width 1s linear; }
-.quiz-bar > div.rev { background: var(--green); }
+.rd-val { font-size: clamp(22px, 3vw, 40px); font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.rd-lbl {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+  margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rd-tile.big { grid-column: span 2; padding: 12px 8px; }
+.rd-tile.big .rd-val { font-size: clamp(48px, 7vw, 96px); letter-spacing: -2px; }
+.rd-tile.big.accent { border-color: var(--accent); background: rgba(255, 106, 61, 0.08); }
+.rd-tile.big.accent .rd-val { color: var(--accent); }
+.rd-tile.big.restcol .rd-val { color: var(--blue); }
+@media (max-width: 560px) {
+  .ride-dash { grid-template-columns: repeat(2, 1fr); }
+  .rd-tile.big { grid-column: span 1; padding: 12px 6px; }
+  .rd-tile.big .rd-val { font-size: clamp(36px, 12vw, 64px); }
+}
+
+/* ride overlay: dashboard-first layout — chart fills the leftover space */
+.timer-overlay > *:not(.learn-card) { width: 100%; max-width: 1100px; margin-left: auto; margin-right: auto; }
+.timer-overlay.ride .timer-current .lbl { font-size: clamp(26px, 4.5vw, 44px); }
+.timer-overlay.ride .timer-current .notes { font-size: clamp(14px, 2vw, 19px); margin-top: 6px; }
+.timer-overlay.ride .timer-up-next { font-size: clamp(16px, 2.4vw, 22px); margin-bottom: 8px; }
+.timer-overlay.ride .ride-chart { flex: 1; min-height: 140px; }
+.timer-overlay.ride .trainer-panel { padding: 10px 12px; gap: 8px; margin-bottom: 10px; }
+.timer-overlay.ride .strip.pwr { flex: 2; }
+.timer-overlay.ride .strip.cad { flex: 1; }
+.timer-overlay.ride .strip-svg { height: auto; flex: 1; min-height: 52px; }
+.flex-spacer { flex: 1; }
+
+/* learn-something pop-up card */
+.learn-card {
+  position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  width: min(760px, 94%); z-index: 70;
+  background: var(--surface); border: 1px solid var(--accent); border-radius: 18px;
+  padding: 18px; box-shadow: var(--shadow);
+}
+.learn-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.learn-tag { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: var(--accent); }
+.learn-count { color: var(--muted); font-size: 13px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.learn-fact { font-size: clamp(20px, 2.8vw, 32px); font-weight: 600; line-height: 1.35; }
+.learn-bar { height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 14px; }
+.learn-bar > div { height: 100%; background: var(--accent); transition: width 1s linear; }
+.learn-topics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.btn.topic { flex: 1; min-width: 130px; }
+.btn.ghost.topic { flex: 0 0 auto; min-width: 48px; }
 
 /* rider FTP stepper (generate screen) */
 .ftp-row { display: flex; align-items: center; gap: 8px; }
