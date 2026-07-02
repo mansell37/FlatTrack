@@ -63,13 +63,13 @@ export default function SettingsPage({ onToast }: { onToast: (m: string) => void
         </div>
         {!garmin && (
           <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Set <code>GARMIN_EMAIL</code> and <code>GARMIN_PASSWORD</code> as environment variables to enable upload.
+            Set <code>GARMIN_TOKENS_B64</code> (preferred) or <code>GARMIN_EMAIL</code>/<code>GARMIN_PASSWORD</code> as environment variables to enable upload.
           </div>
         )}
       </div>
 
       <div className="card center muted" style={{ fontSize: 12 }}>
-        Office Heat · your equipment: 16kg kettlebell · yoga mat · Wahoo trainer
+        FlatTrack · your equipment: 16kg kettlebell · yoga mat · Wahoo trainer
         <div style={{ marginTop: 6 }}>
           Yoga pose data &amp; illustrations from the{" "}
           <a href="https://github.com/alexcumplido/yoga-api" target="_blank" rel="noreferrer">Yoga API</a>.

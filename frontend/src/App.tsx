@@ -47,7 +47,7 @@ export default function App() {
       <div className="topbar">
         <div className="logo">🔥</div>
         <div>
-          <h1>Office Heat</h1>
+          <h1>FlatTrack</h1>
           <div className="sub">Quick workouts from your kit</div>
         </div>
         <button

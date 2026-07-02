@@ -1,4 +1,4 @@
-# 🔥 Office Heat
+# 🔥 FlatTrack
 
 A personal workout generator for the equipment you actually own — a **16kg kettlebell**,
 a **yoga mat**, and a **bike on a Wahoo trainer**. Built for short maintenance sessions
@@ -82,8 +82,8 @@ Copy `.env.example` to `.env` for local use, or set these as Railway service var
 
 ## Deploy on Railway
 
-1. Push this repo to GitHub (already wired to `mansell37/office_heat`).
-2. In Railway: **New Project → Deploy from GitHub repo → office_heat**.
+1. Push this repo to GitHub (wired to `mansell37/FlatTrack`).
+2. In Railway: **New Project → Deploy from GitHub repo → FlatTrack**.
    Railway reads `railway.json` and builds the `Dockerfile` automatically.
 3. Add a database: **New → Database → PostgreSQL**. Railway injects `DATABASE_URL`.
 4. On the app service, add **Variables**:
