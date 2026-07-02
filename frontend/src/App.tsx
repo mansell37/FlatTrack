@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { api } from "./api";
+import { applyTheme, getTheme, type Theme } from "./theme";
 import Login from "./components/Login";
 import Generate from "./pages/Generate";
 import Saved from "./pages/Saved";
@@ -10,6 +11,13 @@ import SettingsPage from "./pages/SettingsPage";
 export default function App() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [toast, setToast] = useState("");
+  const [theme, setTheme] = useState<Theme>(getTheme());
+
+  function toggleTheme() {
+    const next: Theme = theme === "light" ? "dark" : "light";
+    applyTheme(next);
+    setTheme(next);
+  }
 
   function showToast(m: string) {
     setToast(m);
@@ -42,6 +50,14 @@ export default function App() {
           <h1>Office Heat</h1>
           <div className="sub">Quick workouts from your kit</div>
         </div>
+        <button
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+        >
+          {theme === "light" ? "🌙" : "☀️"}
+        </button>
       </div>
 
       <Routes>
