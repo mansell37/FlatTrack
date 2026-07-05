@@ -64,6 +64,16 @@ export interface SessionLog {
 
 export interface Settings {
   ftp: number;
+  weight_kg: number;
   default_energy: Energy;
   prefs: Record<string, unknown>;
+}
+
+export interface ChallengeResult {
+  id: number;
+  challenge_key: string;
+  score: number;
+  unit: "W" | "rounds" | "s";
+  details: Record<string, unknown>;
+  completed_at: string;
 }

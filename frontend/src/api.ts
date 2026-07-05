@@ -1,4 +1,5 @@
 import type {
+  ChallengeResult,
   Energy,
   SavedWorkout,
   SessionLog,
@@ -91,6 +92,14 @@ export const api = {
   aiStatus: () => req<{ configured: boolean }>("/api/ai/status"),
   facts: (topic: string) =>
     req<{ facts: string[]; source: string }>(`/api/facts?topic=${encodeURIComponent(topic)}`),
+
+  challengeResults: () => req<ChallengeResult[]>("/api/challenges/results"),
+  saveChallengeResult: (body: {
+    challenge_key: string;
+    score: number;
+    unit: "W" | "rounds" | "s";
+    details?: Record<string, unknown>;
+  }) => req<ChallengeResult>("/api/challenges/results", { method: "POST", body: JSON.stringify(body) }),
 
   garminStatus: () => req<{ configured: boolean }>("/api/garmin/status"),
   garminUpload: (body: { workout: Workout; date?: string }) =>

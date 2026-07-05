@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Float,
     Integer,
     JSON,
     String,
@@ -101,14 +102,39 @@ class Settings(Base):
 
     id = Column(Integer, primary_key=True)
     ftp = Column(Integer, default=DEFAULT_FTP)
+    weight_kg = Column(Integer, default=70)   # rider weight, for climb physics
     default_energy = Column(String(12), default="ok")
     prefs = Column(JSON, default=dict)
 
     def to_dict(self):
         return {
             "ftp": self.ftp,
+            "weight_kg": self.weight_kg or 70,
             "default_energy": self.default_energy,
             "prefs": self.prefs or {},
+        }
+
+
+class ChallengeResult(Base):
+    """A logged benchmark/challenge attempt (FTP test, KB benchmark, climb...)."""
+
+    __tablename__ = "challenge_results"
+
+    id = Column(Integer, primary_key=True)
+    challenge_key = Column(String(40), nullable=False)   # e.g. ftp_ramp, climb_ventoux
+    score = Column(Float, nullable=False)                # watts, rounds, or seconds
+    unit = Column(String(16), nullable=False)            # "W" | "rounds" | "s"
+    details = Column(JSON, nullable=True)                # avg power, weight used, etc.
+    completed_at = Column(DateTime, default=_now)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "challenge_key": self.challenge_key,
+            "score": self.score,
+            "unit": self.unit,
+            "details": self.details or {},
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
 

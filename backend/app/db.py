@@ -39,7 +39,10 @@ def _ensure_columns():
     """
     from sqlalchemy import inspect, text
 
-    wanted = {"sessions": [("difficulty", "VARCHAR(12)")]}
+    wanted = {
+        "sessions": [("difficulty", "VARCHAR(12)")],
+        "settings": [("weight_kg", "INTEGER")],
+    }
     insp = inspect(engine)
     for table, cols in wanted.items():
         try:

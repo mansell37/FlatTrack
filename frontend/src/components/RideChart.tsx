@@ -2,6 +2,7 @@ export interface Sample {
   p?: number; // power, watts
   c?: number; // cadence, rpm
   t?: number; // ERG target at sample time, watts
+  b?: number; // workout block index at sample time
 }
 
 const W = 1000;

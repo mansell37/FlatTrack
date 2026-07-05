@@ -15,6 +15,11 @@
   /* chart series (CVD-validated against the dark surface) */
   --chart-pwr: #f4581f;
   --chart-cad: #2e86ea;
+  /* climb gradient bands: <4%, 4–7%, 7–10%, 10%+ */
+  --grade-1: #2f9e4f;
+  --grade-2: #d9a514;
+  --grade-3: #e07020;
+  --grade-4: #d43a2e;
 }
 
 /* light theme */
@@ -34,6 +39,10 @@
   /* chart series (CVD-validated against the light surface) */
   --chart-pwr: #f0562c;
   --chart-cad: #2b7fe0;
+  --grade-1: #2f9e4f;
+  --grade-2: #d9a514;
+  --grade-3: #e07020;
+  --grade-4: #d43a2e;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -342,6 +351,43 @@ body {
 .learn-topics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .btn.topic { flex: 1; min-width: 130px; }
 .btn.ghost.topic { flex: 0 0 auto; min-width: 48px; }
+
+/* challenges page */
+.ch-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px; margin-bottom: 10px;
+}
+.ch-emoji { font-size: 26px; flex: none; }
+.ch-main { flex: 1; min-width: 0; }
+.ch-start { flex: none; padding: 10px 18px; }
+.ch-results { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
+.ch-best { font-weight: 800; color: var(--accent); }
+.sparkline { width: 90px; height: 24px; margin-left: 4px; }
+
+/* challenge result on the done screen */
+.challenge-result {
+  text-align: center; background: var(--surface-2);
+  border: 1.5px solid var(--accent); border-radius: 16px;
+  padding: 16px; margin-bottom: 12px;
+}
+.challenge-result .cr-big { font-size: clamp(40px, 8vw, 64px); font-weight: 800; color: var(--accent); line-height: 1.05; }
+
+/* virtual climb */
+.climb-profile { margin-bottom: 12px; }
+.climb-svg {
+  width: 100%; height: 200px; display: block;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
+}
+.timer-overlay.ride .climb-profile { flex: 1; min-height: 160px; display: flex; flex-direction: column; }
+.timer-overlay.ride .climb-svg { flex: 1; height: auto; min-height: 140px; }
+.climb-rider-dot { fill: var(--text); stroke: var(--bg); stroke-width: 2.5; }
+.climb-rider-line { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: 0.75; vector-effect: non-scaling-stroke; }
+.climb-summit { font-size: 26px; }
+.climb-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.rd-unit { font-size: 0.45em; font-weight: 700; color: var(--muted); margin-left: 3px; }
+.weight-row { display: flex; align-items: center; gap: 8px; justify-content: center; }
+.weight-input { max-width: 90px; flex: none; }
 
 /* rider FTP stepper (generate screen) */
 .ftp-row { display: flex; align-items: center; gap: 8px; }

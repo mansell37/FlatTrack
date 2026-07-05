@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from .auth import check_password, require_auth, set_auth_cookie
 from .config import AUTH_ENABLED, FRONTEND_DIST
 from .db import init_db
+from .routes import challenges as challenge_routes
 from .routes import garmin as garmin_routes
 from .routes import settings as settings_routes
 from .routes import workouts as workout_routes
@@ -61,6 +62,7 @@ def health():
 app.include_router(workout_routes.router)
 app.include_router(settings_routes.router)
 app.include_router(garmin_routes.router)
+app.include_router(challenge_routes.router)
 
 
 # ---- serve the built frontend (production) ----
