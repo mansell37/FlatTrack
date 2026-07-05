@@ -4,6 +4,7 @@ import { api } from "./api";
 import { applyTheme, getTheme, type Theme } from "./theme";
 import Login from "./components/Login";
 import Generate from "./pages/Generate";
+import Challenges from "./pages/Challenges";
 import Saved from "./pages/Saved";
 import History from "./pages/History";
 import SettingsPage from "./pages/SettingsPage";
@@ -62,6 +63,7 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<Generate onToast={showToast} />} />
+        <Route path="/challenges" element={<Challenges onToast={showToast} />} />
         <Route path="/saved" element={<Saved onToast={showToast} />} />
         <Route path="/history" element={<History />} />
         <Route path="/settings" element={<SettingsPage onToast={showToast} />} />
@@ -72,6 +74,9 @@ export default function App() {
       <nav className="tabbar">
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
           <span className="ico">🔥</span>Generate
+        </NavLink>
+        <NavLink to="/challenges" className={({ isActive }) => (isActive ? "active" : "")}>
+          <span className="ico">🏆</span>Challenges
         </NavLink>
         <NavLink to="/saved" className={({ isActive }) => (isActive ? "active" : "")}>
           <span className="ico">📚</span>Saved

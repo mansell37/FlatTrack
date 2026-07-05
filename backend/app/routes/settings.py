@@ -31,6 +31,8 @@ def update_settings(req: SettingsUpdate, db: Session = Depends(get_db)):
     s = _get(db)
     if req.ftp is not None:
         s.ftp = req.ftp
+    if req.weight_kg is not None:
+        s.weight_kg = req.weight_kg
     if req.default_energy is not None:
         s.default_energy = req.default_energy
     if req.prefs is not None:

@@ -4,6 +4,7 @@ import { api } from "../api";
 import { finish as finishSound, go, initAudio, rest as restSound, tick, vibrate } from "../sound";
 import { useTrainer } from "../useTrainer";
 import { loadFacts, TOPICS, type Topic } from "../learn";
+import { FTP20_TEST_BLOCK_INDEX, type BenchKind } from "../challenges";
 import LearnCard from "./LearnCard";
 import RideChart, { type Sample } from "./RideChart";
 
@@ -64,10 +65,12 @@ export default function Timer({
   workout,
   onClose,
   onLog,
+  challenge,
 }: {
   workout: Workout;
   onClose: () => void;
   onLog: (elapsedSec: number, rating: "like" | "dislike" | null, difficulty?: string | null) => void;
+  challenge?: { kind: BenchKind; key: string } | null;
 }) {
   const phases = useMemo(() => buildPhases(workout), [workout]);
   const stopwatch = workout.timer === "stopwatch";
@@ -76,6 +79,8 @@ export default function Timer({
   // Bike rides can drive a smart trainer directly (ERG mode) over Web Bluetooth.
   const isRide = workout.type === "cardio" && workout.timer === "interval";
   const isYoga = workout.type === "yoga";
+  // The 20-min FTP test is ridden free-effort: never send ERG targets during it.
+  const ergOn = challenge?.kind !== "ftp20";
   const trainer = useTrainer();
   const [bias, setBias] = useState(100); // intensity % applied to power targets
 
@@ -100,6 +105,7 @@ export default function Timer({
   const [reviewDiff, setReviewDiff] = useState<Difficulty | null>(null);
   const [ftpApplied, setFtpApplied] = useState<number | null>(null);
   const [ftpBusy, setFtpBusy] = useState(false);
+  const [challBusy, setChallBusy] = useState(false);
 
   const totalPlanned = useMemo(
     () => (stopwatch ? 0 : phases.reduce((a, p) => a + (p.seconds || 0), 0)),
@@ -153,7 +159,7 @@ export default function Timer({
     finishSound();
     vibrate([80, 60, 80, 60, 160]);
     // Release the trainer to easy spin so it isn't holding load after you stop.
-    if (isRide) trainer.setTargetPower(0);
+    if (isRide && ergOn) trainer.setTargetPower(0);
   }
 
   useEffect(() => {
@@ -203,6 +209,7 @@ export default function Timer({
           p: dataRef.current.power,
           c: dataRef.current.cadence,
           t: targetRef.current ?? undefined,
+          b: indexRef.current,
         }]);
       }
     }, 2000);
@@ -241,11 +248,11 @@ export default function Timer({
 
   // Push the ERG target to the trainer whenever the block, bias, or connection changes.
   useEffect(() => {
-    if (isRide && trainer.status === "connected" && target != null) {
+    if (isRide && ergOn && trainer.status === "connected" && target != null) {
       trainer.setTargetPower(target);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, trainer.status, isRide]);
+  }, [target, trainer.status, isRide, ergOn]);
 
   // ---- Done screen / post-workout summary ----
   if (done) {
@@ -258,13 +265,85 @@ export default function Timer({
     const avgCad = mean(cads);
     const hasRideStats = isRide && samples.length > 1;
 
+    // ---- Challenge scoring ----
+    let challengeScore: number | null = null;
+    let challengeFtp: number | null = null;
+    if (challenge?.kind === "ramp") {
+      // Best rolling 60s average power (samples every 2s → 30-sample window).
+      const ps = samples.map((s) => s.p ?? 0);
+      const win = 30;
+      let best = 0;
+      if (ps.length >= win) {
+        let sum = ps.slice(0, win).reduce((a, b) => a + b, 0);
+        best = sum;
+        for (let i = win; i < ps.length; i++) {
+          sum += ps[i] - ps[i - win];
+          if (sum > best) best = sum;
+        }
+        best /= win;
+      }
+      if (best > 30) {
+        challengeFtp = Math.round(best * 0.75);
+        challengeScore = challengeFtp;
+      }
+    } else if (challenge?.kind === "ftp20") {
+      const ps = samples
+        .filter((s) => s.b === FTP20_TEST_BLOCK_INDEX)
+        .map((s) => s.p ?? 0)
+        .filter((p) => p > 0);
+      if (ps.length > 30) {
+        challengeFtp = Math.round((ps.reduce((a, b) => a + b, 0) / ps.length) * 0.95);
+        challengeScore = challengeFtp;
+      }
+    } else if (challenge?.kind === "kb") {
+      challengeScore = rounds;
+    }
+
+    async function saveChallenge(setFtpToo: boolean) {
+      if (!challenge || challengeScore == null) return;
+      setChallBusy(true);
+      try {
+        await api.saveChallengeResult({
+          challenge_key: challenge.key,
+          score: challengeScore,
+          unit: challenge.kind === "kb" ? "rounds" : "W",
+          details: { elapsed_sec: elapsedSec, avg_power: avgPower || undefined, max_power: maxPower || undefined },
+        });
+        if (setFtpToo && challengeFtp != null) {
+          await api.updateSettings({ ftp: challengeFtp });
+        }
+        onLog(elapsedSec, null, reviewDiff);
+      } finally {
+        setChallBusy(false);
+      }
+    }
+
     return (
       <div className="timer-overlay done-screen">
         <div className="done-hero">
-          <div className="emoji">🔥</div>
-          <div className="title">Workout done!</div>
+          <div className="emoji">{challenge ? "🏆" : "🔥"}</div>
+          <div className="title">{challenge ? "Test complete!" : "Workout done!"}</div>
           <div className="sub">{fmt(elapsedSec)} elapsed{rounds ? ` · ${rounds} rounds` : ""}</div>
         </div>
+
+        {challenge && (
+          <div className="challenge-result">
+            {challengeScore != null ? (
+              <>
+                <div className="cr-big">
+                  {challenge.kind === "kb" ? `${challengeScore} rounds` : `${challengeScore}W`}
+                </div>
+                <div className="muted">
+                  {challenge.kind === "kb" ? "Your benchmark score" : "Estimated FTP"}
+                </div>
+              </>
+            ) : (
+              <div className="muted center">
+                Not enough power data to score this test — was the trainer connected the whole time?
+              </div>
+            )}
+          </div>
+        )}
 
         {hasRideStats && (
           <>
@@ -332,9 +411,28 @@ export default function Timer({
         })()}
 
         <div className="btn-row" style={{ marginTop: 12 }}>
-          <button className="btn block" onClick={() => onLog(elapsedSec, null, reviewDiff)}>
-            Save to history
-          </button>
+          {challenge && challengeScore != null ? (
+            <>
+              <button
+                className="btn primary block"
+                disabled={challBusy}
+                onClick={() => saveChallenge(challengeFtp != null)}
+              >
+                {challBusy
+                  ? <span className="spinner" />
+                  : challengeFtp != null ? `Save & set FTP to ${challengeFtp}W` : "Save result"}
+              </button>
+              {challengeFtp != null && (
+                <button className="btn" disabled={challBusy} onClick={() => saveChallenge(false)}>
+                  Save only
+                </button>
+              )}
+            </>
+          ) : (
+            <button className="btn block" onClick={() => onLog(elapsedSec, null, reviewDiff)}>
+              Save to history
+            </button>
+          )}
           <button className="btn ghost" onClick={onClose}>Discard</button>
         </div>
       </div>

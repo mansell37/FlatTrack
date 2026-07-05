@@ -70,8 +70,16 @@ class LogSessionRequest(BaseModel):
 
 class SettingsUpdate(BaseModel):
     ftp: Optional[int] = Field(default=None, ge=50, le=600)
+    weight_kg: Optional[int] = Field(default=None, ge=30, le=200)
     default_energy: Optional[Energy] = None
     prefs: Optional[dict[str, Any]] = None
+
+
+class ChallengeResultRequest(BaseModel):
+    challenge_key: str = Field(min_length=1, max_length=40)
+    score: float
+    unit: Literal["W", "rounds", "s"]
+    details: Optional[dict[str, Any]] = None
 
 
 class GarminUploadRequest(BaseModel):
